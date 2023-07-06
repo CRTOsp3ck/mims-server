@@ -1,0 +1,45 @@
+create_table("agent") {
+  t.Column("id", "integer", {primary: true})
+  t.Column("username", "string", {"default": ""})
+  t.Column("password", "string", {"default": ""})
+  t.Column("name", "string", {"default": ""})
+  t.Column("email", "string", {"default": ""})
+  t.Column("phone", "string", {"default": ""})
+  t.Column("is_owner", "boolean", {"default": false})
+}
+create_table("balance") {
+  t.Column("id", "integer", {primary: true})
+  t.Column("bal_cash", "string", {"default": "sb=0&eb=0"})
+  t.Column("bal_qr", "string", {"default": "sb=0&eb=0"})
+}
+create_table("item") {
+  t.Column("id", "integer", {primary: true})
+  t.Column("name", "string", {"default": ""})
+  t.Column("des", "string", {"default": ""})
+}
+create_table("inventory") {
+  t.Column("id", "integer", {primary: true})
+  t.Column("start_item_bal", "string", {"default": "1=0"})
+  t.Column("end_item_bal", "string", {"default": "1=0"})
+}
+create_table("operation") {
+  t.Column("id", "integer", {primary: true})
+  t.Column("start_time", "timestamp", {})
+  t.Column("end_time", "timestamp", {})
+  t.Column("location", "string", {"default": ""})
+  t.Column("agent_id", "integer", {})
+  t.Column("total_sales_qty", "integer", {"default": "0"})
+  t.Column("total_cost", "float", {"default": "0.00"})
+  t.Column("total_sales_amount", "float", {"default": "0.00"})
+  t.Column("net_profit", "float", {"default": "0.00"})
+  t.Column("balance_id", "integer", {})
+  t.Column("inventory_id", "integer", {})
+}
+create_table("sale") {
+  t.Column("id", "integer", {primary: true})
+  t.Column("amount", "float", {"default": "0.0"})
+  t.Column("quantity", "integer", {"default": "0"})
+  t.Column("payment_type", "integer", {"default": "1"})
+  t.Column("operation_id", "integer", {})
+  t.Column("item_id", "integer", {})
+}

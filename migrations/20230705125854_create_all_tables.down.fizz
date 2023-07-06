@@ -1,0 +1,7 @@
+drop_table("agent")
+drop_table("balance")
+drop_table("item")
+drop_table("inventory")
+drop_table("operation")
+drop_table("sale")
+
