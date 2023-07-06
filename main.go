@@ -174,8 +174,8 @@ func main() {
 			// Insert a new balance record into database
 			sbCash := c.Params("start_bal_cash")
 			sbQr := c.Params("start_bal_qr")
-			balCashStr := "sb" + sbCash + "&eb=-1" //-1 means operation is in progress
-			balQrStr := "sb" + sbQr + "&eb=-1"
+			balCashStr := "sb=" + sbCash + "&eb=-1" //-1 means operation is in progress
+			balQrStr := "sb=" + sbQr + "&eb=-1"
 			res, err := db.Query("INSERT INTO balance (bal_cash, bal_qr, created_at, updated_at)VALUES ($1, $2, $3, $4)", balCashStr, balQrStr, time.Now(), time.Now())
 			_ = res
 			if err != nil {
