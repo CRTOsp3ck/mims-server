@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"strconv"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -61,7 +62,7 @@ type Inventory struct {
 type Sale struct {
 	ID          int       `json:"id"`
 	Amount      float32   `json:"amount"`
-	Qty         float32   `json:"quantity"`
+	Qty         float32   `json:"quantity"` //this is float and not int bcos in case we plan to sell by weight, then it wouldnt make sense to use int
 	PaymentType int       `json:"payment_type"`
 	OperationID int       `json:"operation_id"`
 	ItemID      int       `json:"item_id"`
@@ -153,7 +154,7 @@ func main() {
 	// Get all operations
 
 	// Start operation
-	app.Post("/operations/:location-:agent_user/bal/:start_bal_cash-:start_bal_qr/inv/:start_item_bal",
+	app.Post("/operations/start/:location-:agent_user/bal/:start_bal_cash-:start_bal_qr/inv/:start_item_bal",
 		func(c *fiber.Ctx) error {
 			paramCache := new(Operation)
 			paramCache.StartTime = time.Now()
@@ -202,7 +203,7 @@ func main() {
 			log.Println("Inventory id", inv.ID)
 			paramCache.InventoryID = inv.ID
 
-			// Push all cached data to db
+			// Insert all cached data to db
 			res, err = db.Query("INSERT INTO operation (start_time, end_time, location, agent_id, total_sales_qty, total_cost, total_sales_amount, net_profit, balance_id, inventory_id, created_at, updated_at)VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)",
 				paramCache.StartTime, paramCache.EndTime, paramCache.Location, paramCache.AgentID, 0, 0.00, 0.00, 0.00, paramCache.BalanceID, paramCache.InventoryID, time.Now(), time.Now())
 			_ = res
@@ -219,10 +220,98 @@ func main() {
 		})
 
 	// End operation
+	app.Put("/operations/end/:id",
+		func(c *fiber.Ctx) error {
+			id, err := strconv.Atoi(c.Params("id"))
+			if err != nil {
+				return err
+			}
+
+			paramCache := new(Operation)
+			paramCache.EndTime = time.Now()
+			// Find and calculate all sales from this operation (using oepration_id)
+			paramCache.TotalSalesQty = 0
+			// Enter total cost during operation end
+			paramCache.TotalCost = 0.00
+			// Calculate total sales amount (sale qty*price sold)
+			paramCache.TotalSalesAmount = 0.00
+			// Calculate net profit (total sales qty * rm8)
+			paramCache.NetProfit = 0.00
+			paramCache.UpdatedAt = time.Now()
+
+			// Update operation into database
+			res, err := db.Query("UPDATE operation SET end_time=$1,total_sales_qty=$2,total_cost=$3,total_sales_amount=$4,net_profit=$5, updated_at=$6 WHERE id=$7", paramCache.EndTime, paramCache.TotalSalesQty, paramCache.TotalCost, paramCache.TotalSalesAmount, paramCache.NetProfit, paramCache.UpdatedAt, id)
+			_ = res
+			if err != nil {
+				return err
+			}
+
+			op := new(Operation)
+			// Re-querying because the scan from insert has no value?
+			resReQuery := db.QueryRow("SELECT id, start_time, end_time, location, agent_id, total_sales_qty, total_cost, total_sales_amount, net_profit, balance_id, inventory_id, created_at, updated_at FROM operation ORDER BY ID DESC LIMIT 1")
+			resReQuery.Scan(&op.ID, &op.StartTime, &op.EndTime, &op.Location, &op.AgentID, &op.TotalSalesQty, &op.TotalCost, &op.TotalSalesAmount, &op.NetProfit, &op.BalanceID, &op.InventoryID, &op.CreatedAt, &op.UpdatedAt)
+
+			// Return operation in JSON format
+			return c.Status(201).JSON(op)
+		})
 
 	// >> Sales
 
+	// Get list of sale (by date)
+
 	// New Sale
+	app.Post("/sales/new/:amount-:qty-:payment_type-:operation_id-:item_id", func(c *fiber.Ctx) error {
+		paramCache := new(Sale)
+
+		amt, err := strconv.Atoi(c.Params("amount"))
+		if err != nil {
+			return err
+		}
+		paramCache.Amount = float32(amt)
+
+		qty, err := strconv.Atoi(c.Params("qty"))
+		if err != nil {
+			return err
+		}
+		paramCache.Qty = float32(qty)
+
+		pt, err := strconv.Atoi(c.Params("payment_type"))
+		if err != nil {
+			return err
+		}
+		paramCache.PaymentType = pt
+
+		oid, err := strconv.Atoi(c.Params("operation_id"))
+		if err != nil {
+			return err
+		}
+		paramCache.OperationID = oid
+
+		iid, err := strconv.Atoi(c.Params("item_id"))
+		if err != nil {
+			return err
+		}
+		paramCache.ItemID = iid
+
+		// Insert sale into database
+		res, err := db.Query("INSERT INTO sale (amount, quantity, payment_type, operation_id, item_id, created_at, updated_at)VALUES ($1, $2, $3, $4, $5, $6, $7)",
+			paramCache.Amount, paramCache.Qty, paramCache.PaymentType, paramCache.OperationID, paramCache.ItemID, time.Now(), time.Now())
+		_ = res
+		if err != nil {
+			return err
+		}
+
+		sale := new(Sale)
+		// Re-querying because the scan from insert has no value?
+		resReQuery := db.QueryRow("SELECT id, amount, quantity, payment_type, operation_id, item_id, created_at, updated_at FROM sale ORDER BY ID DESC LIMIT 1")
+		resReQuery.Scan(&sale.ID, &sale.Amount, &sale.Qty, &sale.PaymentType, &sale.OperationID, &sale.ItemID, &sale.CreatedAt, &sale.UpdatedAt)
+
+		// Print result
+		log.Println(sale)
+
+		// Return Employee in JSON format
+		return c.JSON(sale)
+	})
 
 	// Update Sale
 
