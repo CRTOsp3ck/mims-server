@@ -70,6 +70,10 @@ type Sale struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
+type Sales struct {
+	Sales []Sale `json:"sales"`
+}
+
 type Operation struct {
 	ID               int       `json:"id"`
 	StartTime        time.Time `json:"start_time"`
@@ -117,6 +121,7 @@ func main() {
 	app := fiber.New()
 
 	// >> Agent
+
 	// Get list of all agents
 	app.Get("/agents", func(c *fiber.Ctx) error {
 		rows, err := db.Query("SELECT id, username, password, name, email, phone, is_owner, created_at, updated_at FROM agent order by id")
@@ -137,6 +142,7 @@ func main() {
 
 		return c.JSON(result)
 	})
+
 	// Find agent by username
 	app.Get("/agents/:user", func(c *fiber.Ctx) error {
 		user := c.Params("user")
@@ -246,7 +252,7 @@ func main() {
 				return err
 			}
 
-			op := new(Operation)
+			op := Operation{}
 			// Re-querying because the scan from insert has no value?
 			resReQuery := db.QueryRow("SELECT id, start_time, end_time, location, agent_id, total_sales_qty, total_cost, total_sales_amount, net_profit, balance_id, inventory_id, created_at, updated_at FROM operation ORDER BY ID DESC LIMIT 1")
 			resReQuery.Scan(&op.ID, &op.StartTime, &op.EndTime, &op.Location, &op.AgentID, &op.TotalSalesQty, &op.TotalCost, &op.TotalSalesAmount, &op.NetProfit, &op.BalanceID, &op.InventoryID, &op.CreatedAt, &op.UpdatedAt)
@@ -257,7 +263,61 @@ func main() {
 
 	// >> Sales
 
+	// Get all sales
+	app.Get("/sales/find/", func(c *fiber.Ctx) error {
+		rows, err := db.Query("SELECT id, amount, quantity, payment_type, operation_id, item_id, created_at, updated_at FROM sale order by id")
+		if err != nil {
+			return c.Status(500).SendString(err.Error())
+		}
+		defer rows.Close()
+		result := Sales{}
+
+		for rows.Next() {
+			sale := Sale{}
+			if err := rows.Scan(&sale.ID, &sale.Amount, &sale.Qty, &sale.PaymentType, &sale.OperationID, &sale.ItemID, &sale.CreatedAt, &sale.UpdatedAt); err != nil {
+				return err // Exit if we get an error
+			}
+
+			// Append Sale to Sales
+			result.Sales = append(result.Sales, sale)
+		}
+		// Return Sales in JSON format
+		return c.JSON(result)
+	})
+
 	// Get list of sale (by date)
+	app.Get("/sales/find/:syear-:smonth-:sday-:eyear-:emonth-:eday", func(c *fiber.Ctx) error {
+
+		s_year, _ := strconv.Atoi(c.Params("syear"))
+		s_month, _ := strconv.Atoi(c.Params("smonth"))
+		s_day, _ := strconv.Atoi(c.Params("sday"))
+
+		e_year, _ := strconv.Atoi(c.Params("eyear"))
+		e_month, _ := strconv.Atoi(c.Params("emonth"))
+		e_day, _ := strconv.Atoi(c.Params("eday"))
+
+		sd := time.Date(s_year, time.Month(s_month), s_day, 0, 0, 0, 0, time.Local)
+		ed := time.Date(e_year, time.Month(e_month), e_day, 0, 0, 0, 0, time.Local)
+
+		rows, err := db.Query("SELECT id, amount, quantity, payment_type, operation_id, item_id, created_at, updated_at FROM sale WHERE date_trunc('day', created_at) BETWEEN $1 and $2", sd, ed)
+		if err != nil {
+			return c.Status(500).SendString(err.Error())
+		}
+		defer rows.Close()
+		result := Sales{}
+
+		for rows.Next() {
+			sale := Sale{}
+			if err := rows.Scan(&sale.ID, &sale.Amount, &sale.Qty, &sale.PaymentType, &sale.OperationID, &sale.ItemID, &sale.CreatedAt, &sale.UpdatedAt); err != nil {
+				return err // Exit if we get an error
+			}
+
+			// Append Sale to Sales
+			result.Sales = append(result.Sales, sale)
+		}
+		// Return Sales in JSON format
+		return c.JSON(result)
+	})
 
 	// New Sale
 	app.Post("/sales/new/:amount-:qty-:payment_type-:operation_id-:item_id", func(c *fiber.Ctx) error {
