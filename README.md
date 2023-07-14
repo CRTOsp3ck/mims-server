@@ -1,4 +1,6 @@
 ##### README #####
+1. Install go
+2. Install postgres
 ##### NOTES #####
 1. Payment types:-
     1 - Cash
