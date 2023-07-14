@@ -1,6 +1,14 @@
 ##### README #####
 1. Install go
 2. Install postgres
+3. add root as psql user
+4. set root psql password
+5. create db with name root
+6. git clone mims-server
+7. change main.go db settings
+8. change database.yml settings
+9. i know it is shit systems design atm, but its a start
+
 ##### NOTES #####
 1. Payment types:-
     1 - Cash
