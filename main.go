@@ -1,6 +1,3 @@
-// 🚀 Fiber is an Express inspired web framework written in Go with 💖
-// 📌 API Documentation: https://docs.gofiber.io
-// 📝 Github Repository: https://github.com/gofiber/fiber
 package main
 
 import (
@@ -17,86 +14,23 @@ import (
 // Database instance
 var db *sql.DB
 
-// Database settings
+// Database settings - development
+// const (
+// 	host     = "localhost"
+// 	port     = 5432 // Default port
+// 	user     = "sp3ck"
+// 	password = "88888888"
+// 	dbname   = "mims_server_development"
+// )
+
+// Database settings - production
 const (
-	host     = "localhost"
+	host     = "127.0.0.1"
 	port     = 5432 // Default port
-	user     = "sp3ck"
-	password = "88888888"
-	dbname   = "mims_server_development"
+	user     = "root"
+	password = ""
+	dbname   = "root"
 )
-
-// Data models
-type Agent struct {
-	ID        int       `json:"id"`
-	Username  string    `json:"username"`
-	Password  string    `json:"password"`
-	Name      string    `json:"name"`
-	Email     string    `json:"email"`
-	Phone     string    `json:"phone"`
-	IsOwner   bool      `json:"is_owner"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-}
-
-type Agents struct {
-	Agents []Agent `json:"agents"`
-}
-
-type Balance struct {
-	ID        int       `json:"id"`
-	BalCash   string    `json:"bal_cash"`
-	BalQr     string    `json:"bal_qr"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-}
-
-type Inventory struct {
-	ID           int       `json:"id"`
-	StartItemBal string    `json:"start_item_bal"`
-	EndItemBal   string    `json:"end_item_bal"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
-}
-
-type Sale struct {
-	ID          int       `json:"id"`
-	Amount      float32   `json:"amount"`
-	Qty         float32   `json:"quantity"` //this is float and not int bcos in case we plan to sell by weight, then it wouldnt make sense to use int
-	PaymentType int       `json:"payment_type"`
-	OperationID int       `json:"operation_id"`
-	ItemID      int       `json:"item_id"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
-}
-
-type Sales struct {
-	Sales []Sale `json:"sales"`
-}
-
-type Operation struct {
-	ID               int       `json:"id"`
-	StartTime        time.Time `json:"start_time"`
-	EndTime          time.Time `json:"end_time"`
-	Location         string    `json:"location"`
-	AgentID          int       `json:"agent_id"`
-	TotalSalesQty    int       `json:"total_sales_qty"`
-	TotalCost        float32   `json:"total_cost"`
-	TotalSalesAmount float32   `json:"total_sales_amount"`
-	NetProfit        float32   `json:"net_profit"`
-	BalanceID        int       `json:"balance_id"`
-	InventoryID      int       `json:"inventory_id"`
-	CreatedAt        time.Time `json:"created_at"`
-	UpdatedAt        time.Time `json:"updated_at"`
-}
-
-type Item struct {
-	ID        int       `json:"id"`
-	Name      string    `json:"name"`
-	Des       string    `json:"des"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-}
 
 // Connect function
 func Connect() error {
@@ -385,5 +319,77 @@ func main() {
 
 	// Delete inventory (admin only)
 
-	log.Fatal(app.Listen(":3000"))
+	log.Fatal(app.Listen(":3001"))
+}
+
+// Data models
+type Agent struct {
+	ID        int       `json:"id"`
+	Username  string    `json:"username"`
+	Password  string    `json:"password"`
+	Name      string    `json:"name"`
+	Email     string    `json:"email"`
+	Phone     string    `json:"phone"`
+	IsOwner   bool      `json:"is_owner"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+type Agents struct {
+	Agents []Agent `json:"agents"`
+}
+
+type Balance struct {
+	ID        int       `json:"id"`
+	BalCash   string    `json:"bal_cash"`
+	BalQr     string    `json:"bal_qr"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+type Inventory struct {
+	ID           int       `json:"id"`
+	StartItemBal string    `json:"start_item_bal"`
+	EndItemBal   string    `json:"end_item_bal"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}
+
+type Sale struct {
+	ID          int       `json:"id"`
+	Amount      float32   `json:"amount"`
+	Qty         float32   `json:"quantity"` //this is float and not int bcos in case we plan to sell by weight, then it wouldnt make sense to use int
+	PaymentType int       `json:"payment_type"`
+	OperationID int       `json:"operation_id"`
+	ItemID      int       `json:"item_id"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+type Sales struct {
+	Sales []Sale `json:"sales"`
+}
+
+type Operation struct {
+	ID               int       `json:"id"`
+	StartTime        time.Time `json:"start_time"`
+	EndTime          time.Time `json:"end_time"`
+	Location         string    `json:"location"`
+	AgentID          int       `json:"agent_id"`
+	TotalSalesQty    int       `json:"total_sales_qty"`
+	TotalCost        float32   `json:"total_cost"`
+	TotalSalesAmount float32   `json:"total_sales_amount"`
+	NetProfit        float32   `json:"net_profit"`
+	BalanceID        int       `json:"balance_id"`
+	InventoryID      int       `json:"inventory_id"`
+	CreatedAt        time.Time `json:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at"`
+}
+
+type Item struct {
+	ID        int       `json:"id"`
+	Name      string    `json:"name"`
+	Des       string    `json:"des"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }

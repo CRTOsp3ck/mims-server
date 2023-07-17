@@ -1,15 +1,31 @@
 # This file is for soda to generate seed data. 
 # Not for application wide settings.
+# development:
+#   dialect: postgres
+#   database: mims_server_development
+#   user: sp3ck
+#   password: 88888888
+#   host: 0.0.0.0
+#   pool: 5
+
+# test:
+#   url: {{envOr "TEST_DATABASE_URL" "postgres://postgres:postgres@127.0.0.1:5432/mims_server_development"}}
+
+# production:
+#   url: {{envOr "DATABASE_URL" "postgres://postgres:postgres@127.0.0.1:5432/mims_server_development"}}
+
+# for production only
 development:
   dialect: postgres
-  database: mims_server_development
-  user: sp3ck
-  password: 88888888
-  host: 0.0.0.0
+  database: root
+  user: root
+  password: 
+  host: 127.0.0.1
   pool: 5
 
 test:
-  url: {{envOr "TEST_DATABASE_URL" "postgres://postgres:postgres@127.0.0.1:5432/mims_server_development"}}
+  url: {{envOr "TEST_DATABASE_URL" "postgres://postgres:postgres@127.0.0.1:5432/root"}}
 
 production:
-  url: {{envOr "DATABASE_URL" "postgres://postgres:postgres@127.0.0.1:5432/mims_server_development"}}
+  url: {{envOr "DATABASE_URL" "postgres://postgres:postgres@127.0.0.1:5432/root"}}
+
