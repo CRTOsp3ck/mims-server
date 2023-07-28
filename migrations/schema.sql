@@ -104,8 +104,8 @@ ALTER SEQUENCE public.balance_id_seq OWNED BY public.balance.id;
 
 CREATE TABLE public.inventory (
     id integer NOT NULL,
-    start_item_bal character varying(255) DEFAULT '1=0'::character varying NOT NULL,
-    end_item_bal character varying(255) DEFAULT '1=0'::character varying NOT NULL,
+    start_bal character varying(255) DEFAULT '1=0'::character varying NOT NULL,
+    end_bal character varying(255) DEFAULT '1=0'::character varying NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL
 );

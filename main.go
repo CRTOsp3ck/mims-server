@@ -15,22 +15,22 @@ import (
 var db *sql.DB
 
 // Database settings - development
-// const (
-// 	host     = "localhost"
-// 	port     = 5432 // Default port
-// 	user     = "sp3ck"
-// 	password = "88888888"
-// 	dbname   = "mims_server_development"
-// )
+const (
+	host     = "localhost"
+	port     = 5432 // Default port
+	user     = "sp3ck"
+	password = "88888888"
+	dbname   = "mims_server_development"
+)
 
 // Database settings - production
-const (
-	host     = "127.0.0.1"
-	port     = 5432 // Default port
-	user     = "root"
-	password = ""
-	dbname   = "root"
-)
+// const (
+// 	host     = "127.0.0.1"
+// 	port     = 5432 // Default port
+// 	user     = "root"
+// 	password = ""
+// 	dbname   = "root"
+// )
 
 // Connect function
 func Connect() error {
@@ -55,9 +55,8 @@ func main() {
 	app := fiber.New()
 
 	// >> Agent
-
 	// Get list of all agents
-	app.Get("/agents", func(c *fiber.Ctx) error {
+	app.Get("/ag", func(c *fiber.Ctx) error {
 		rows, err := db.Query("SELECT id, username, password, name, email, phone, is_owner, created_at, updated_at FROM agent order by id")
 		if err != nil {
 			return c.Status(500).SendString(err.Error())
@@ -76,9 +75,8 @@ func main() {
 
 		return c.JSON(result)
 	})
-
 	// Find agent by username
-	app.Get("/agents/:user", func(c *fiber.Ctx) error {
+	app.Get("/ag/:user", func(c *fiber.Ctx) error {
 		user := c.Params("user")
 		row := db.QueryRow("SELECT id, username, password, name, email, phone, is_owner, created_at, updated_at FROM agent WHERE username = $1", user)
 		res := Agent{}
@@ -90,115 +88,110 @@ func main() {
 	})
 
 	// >> Operation
-
 	// Get all operations
 
 	// Start operation
-	app.Post("/operations/start/:location-:agent_user/bal/:start_bal_cash-:start_bal_qr/inv/:start_item_bal",
-		func(c *fiber.Ctx) error {
-			paramCache := new(Operation)
-			paramCache.StartTime = time.Now()
-			paramCache.EndTime = time.Time{}
-			paramCache.Location = c.Params("location")
+	app.Post("/op/start/:location-:agent_user/bal/:start_bal_cash-:start_bal_qr/inv/:start_item_bal", func(c *fiber.Ctx) error {
+		paramCache := new(Operation)
+		paramCache.StartTime = time.Now()
+		paramCache.EndTime = time.Time{}
+		paramCache.Location = c.Params("location")
 
-			// Find ID of the agent's username
-			user := c.Params("agent_user")
-			row := db.QueryRow("SELECT id, username, password, name, email, phone, is_owner, created_at, updated_at FROM agent WHERE username = $1", user)
-			agent := Agent{}
-			err := row.Scan(&agent.ID, &agent.Username, &agent.Password, &agent.Name, &agent.Email, &agent.Phone, &agent.IsOwner, &agent.CreatedAt, &agent.UpdatedAt)
-			if err != nil {
-				return err
-			}
-			log.Println("Agent id", agent.ID)
-			paramCache.AgentID = agent.ID
+		// Find ID of the agent's username
+		user := c.Params("agent_user")
+		row := db.QueryRow("SELECT id, username, password, name, email, phone, is_owner, created_at, updated_at FROM agent WHERE username = $1", user)
+		agent := Agent{}
+		err := row.Scan(&agent.ID, &agent.Username, &agent.Password, &agent.Name, &agent.Email, &agent.Phone, &agent.IsOwner, &agent.CreatedAt, &agent.UpdatedAt)
+		if err != nil {
+			return err
+		}
+		log.Println("Agent id", agent.ID)
+		paramCache.AgentID = agent.ID
 
-			// Insert a new balance record into database
-			sbCash := c.Params("start_bal_cash")
-			sbQr := c.Params("start_bal_qr")
-			balCashStr := "sb=" + sbCash + "&eb=-1" //-1 means operation is in progress
-			balQrStr := "sb=" + sbQr + "&eb=-1"
-			res, err := db.Query("INSERT INTO balance (bal_cash, bal_qr, created_at, updated_at)VALUES ($1, $2, $3, $4)", balCashStr, balQrStr, time.Now(), time.Now())
-			_ = res
-			if err != nil {
-				return err
-			}
-			bal := new(Balance)
-			// Re-querying because the scan from insert has no value?
-			resReQuery := db.QueryRow("SELECT id, bal_cash, bal_qr, created_at, updated_at FROM balance ORDER BY ID DESC LIMIT 1")
-			resReQuery.Scan(&bal.ID, &bal.BalCash, &bal.BalQr, &bal.CreatedAt, &bal.UpdatedAt)
-			log.Println("Balance id", bal.ID)
-			paramCache.BalanceID = bal.ID
+		// Insert a new balance record into database
+		sbCash := c.Params("start_bal_cash")
+		sbQr := c.Params("start_bal_qr")
+		balCashStr := "sb=" + sbCash + "&eb=-1" //-1 means operation is in progress
+		balQrStr := "sb=" + sbQr + "&eb=-1"
+		res, err := db.Query("INSERT INTO balance (bal_cash, bal_qr, created_at, updated_at)VALUES ($1, $2, $3, $4)", balCashStr, balQrStr, time.Now(), time.Now())
+		_ = res
+		if err != nil {
+			return err
+		}
+		bal := new(Balance)
+		// Re-querying because the scan from insert has no value?
+		resReQuery := db.QueryRow("SELECT id, bal_cash, bal_qr, created_at, updated_at FROM balance ORDER BY ID DESC LIMIT 1")
+		resReQuery.Scan(&bal.ID, &bal.BalCash, &bal.BalQr, &bal.CreatedAt, &bal.UpdatedAt)
+		log.Println("Balance id", bal.ID)
+		paramCache.BalanceID = bal.ID
 
-			// Insert a new inventory record into database
-			sbItem := c.Params("start_item_bal")
-			res, err = db.Query("INSERT INTO inventory (start_item_bal, end_item_bal, created_at, updated_at)VALUES ($1, $2, $3, $4)", sbItem, "", time.Now(), time.Now())
-			_ = res
-			if err != nil {
-				return err
-			}
-			inv := new(Inventory)
-			// Re-querying because the scan from insert has no value?
-			resReQuery = db.QueryRow("SELECT id, start_item_bal, end_item_bal, created_at, updated_at FROM inventory ORDER BY ID DESC LIMIT 1")
-			resReQuery.Scan(&inv.ID, &inv.StartItemBal, &inv.EndItemBal, &inv.CreatedAt, &inv.UpdatedAt)
-			log.Println("Inventory id", inv.ID)
-			paramCache.InventoryID = inv.ID
+		// Insert a new inventory record into database
+		sbItem := c.Params("start_bal")
+		res, err = db.Query("INSERT INTO inventory (start_bal, end_bal, created_at, updated_at)VALUES ($1, $2, $3, $4)", sbItem, "-1", time.Now(), time.Now())
+		_ = res
+		if err != nil {
+			return err
+		}
+		inv := new(Inventory)
+		// Re-querying because the scan from insert has no value?
+		resReQuery = db.QueryRow("SELECT id, start_bal, end_bal, created_at, updated_at FROM inventory ORDER BY ID DESC LIMIT 1")
+		resReQuery.Scan(&inv.ID, &inv.StartBal, &inv.EndBal, &inv.CreatedAt, &inv.UpdatedAt)
+		log.Println("Inventory id", inv.ID)
+		paramCache.InventoryID = inv.ID
 
-			// Insert all cached data to db
-			res, err = db.Query("INSERT INTO operation (start_time, end_time, location, agent_id, total_sales_qty, total_cost, total_sales_amount, net_profit, balance_id, inventory_id, created_at, updated_at)VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)",
-				paramCache.StartTime, paramCache.EndTime, paramCache.Location, paramCache.AgentID, 0, 0.00, 0.00, 0.00, paramCache.BalanceID, paramCache.InventoryID, time.Now(), time.Now())
-			_ = res
-			if err != nil {
-				return err
-			}
-			op := new(Operation)
-			// Re-querying because the scan from insert has no value?
-			resReQuery = db.QueryRow("SELECT id, start_time, end_time, location, agent_id, total_sales_qty, total_cost, total_sales_amount, net_profit, balance_id, inventory_id, created_at, updated_at FROM operation ORDER BY ID DESC LIMIT 1")
-			resReQuery.Scan(&op.ID, &op.StartTime, &op.EndTime, &op.Location, &op.AgentID, &op.TotalSalesQty, &op.TotalCost, &op.TotalSalesAmount, &op.NetProfit, &op.BalanceID, &op.InventoryID, &op.CreatedAt, &op.UpdatedAt)
+		// Insert all cached data to db
+		res, err = db.Query("INSERT INTO operation (start_time, end_time, location, agent_id, total_sales_qty, total_cost, total_sales_amount, net_profit, balance_id, inventory_id, created_at, updated_at)VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)",
+			paramCache.StartTime, paramCache.EndTime, paramCache.Location, paramCache.AgentID, 0, 0.00, 0.00, 0.00, paramCache.BalanceID, paramCache.InventoryID, time.Now(), time.Now())
+		_ = res
+		if err != nil {
+			return err
+		}
+		op := new(Operation)
+		// Re-querying because the scan from insert has no value?
+		resReQuery = db.QueryRow("SELECT id, start_time, end_time, location, agent_id, total_sales_qty, total_cost, total_sales_amount, net_profit, balance_id, inventory_id, created_at, updated_at FROM operation ORDER BY ID DESC LIMIT 1")
+		resReQuery.Scan(&op.ID, &op.StartTime, &op.EndTime, &op.Location, &op.AgentID, &op.TotalSalesQty, &op.TotalCost, &op.TotalSalesAmount, &op.NetProfit, &op.BalanceID, &op.InventoryID, &op.CreatedAt, &op.UpdatedAt)
 
-			// Return final operation in JSON format
-			return c.JSON(op)
-		})
-
+		// Return final operation in JSON format
+		return c.JSON(op)
+	})
 	// End operation
-	app.Put("/operations/end/:id",
-		func(c *fiber.Ctx) error {
-			id, err := strconv.Atoi(c.Params("id"))
-			if err != nil {
-				return err
-			}
+	app.Put("/op/end/:id", func(c *fiber.Ctx) error {
+		id, err := strconv.Atoi(c.Params("id"))
+		if err != nil {
+			return err
+		}
 
-			paramCache := new(Operation)
-			paramCache.EndTime = time.Now()
-			// Find and calculate all sales from this operation (using oepration_id)
-			paramCache.TotalSalesQty = 0
-			// Enter total cost during operation end
-			paramCache.TotalCost = 0.00
-			// Calculate total sales amount (sale qty*price sold)
-			paramCache.TotalSalesAmount = 0.00
-			// Calculate net profit (total sales qty * rm8)
-			paramCache.NetProfit = 0.00
-			paramCache.UpdatedAt = time.Now()
+		paramCache := new(Operation)
+		paramCache.EndTime = time.Now()
+		// Find and calculate all sales from this operation (using oepration_id)
+		paramCache.TotalSalesQty = 0
+		// Enter total cost during operation end
+		paramCache.TotalCost = 0.00
+		// Calculate total sales amount (sale qty*price sold)
+		paramCache.TotalSalesAmount = 0.00
+		// Calculate net profit (total sales qty * rm8)
+		paramCache.NetProfit = 0.00
+		paramCache.UpdatedAt = time.Now()
 
-			// Update operation into database
-			res, err := db.Query("UPDATE operation SET end_time=$1,total_sales_qty=$2,total_cost=$3,total_sales_amount=$4,net_profit=$5, updated_at=$6 WHERE id=$7", paramCache.EndTime, paramCache.TotalSalesQty, paramCache.TotalCost, paramCache.TotalSalesAmount, paramCache.NetProfit, paramCache.UpdatedAt, id)
-			_ = res
-			if err != nil {
-				return err
-			}
+		// Update operation into database
+		res, err := db.Query("UPDATE operation SET end_time=$1,total_sales_qty=$2,total_cost=$3,total_sales_amount=$4,net_profit=$5, updated_at=$6 WHERE id=$7", paramCache.EndTime, paramCache.TotalSalesQty, paramCache.TotalCost, paramCache.TotalSalesAmount, paramCache.NetProfit, paramCache.UpdatedAt, id)
+		_ = res
+		if err != nil {
+			return err
+		}
 
-			op := Operation{}
-			// Re-querying because the scan from insert has no value?
-			resReQuery := db.QueryRow("SELECT id, start_time, end_time, location, agent_id, total_sales_qty, total_cost, total_sales_amount, net_profit, balance_id, inventory_id, created_at, updated_at FROM operation ORDER BY ID DESC LIMIT 1")
-			resReQuery.Scan(&op.ID, &op.StartTime, &op.EndTime, &op.Location, &op.AgentID, &op.TotalSalesQty, &op.TotalCost, &op.TotalSalesAmount, &op.NetProfit, &op.BalanceID, &op.InventoryID, &op.CreatedAt, &op.UpdatedAt)
+		op := Operation{}
+		// Re-querying because the scan from insert has no value?
+		resReQuery := db.QueryRow("SELECT id, start_time, end_time, location, agent_id, total_sales_qty, total_cost, total_sales_amount, net_profit, balance_id, inventory_id, created_at, updated_at FROM operation ORDER BY ID DESC LIMIT 1")
+		resReQuery.Scan(&op.ID, &op.StartTime, &op.EndTime, &op.Location, &op.AgentID, &op.TotalSalesQty, &op.TotalCost, &op.TotalSalesAmount, &op.NetProfit, &op.BalanceID, &op.InventoryID, &op.CreatedAt, &op.UpdatedAt)
 
-			// Return operation in JSON format
-			return c.Status(201).JSON(op)
-		})
+		// Return operation in JSON format
+		return c.Status(201).JSON(op)
+	})
 
 	// >> Sales
-
 	// Get all sales
-	app.Get("/sales/find/", func(c *fiber.Ctx) error {
+	app.Get("/sa", func(c *fiber.Ctx) error {
 		rows, err := db.Query("SELECT id, amount, quantity, payment_type, operation_id, item_id, created_at, updated_at FROM sale order by id")
 		if err != nil {
 			return c.Status(500).SendString(err.Error())
@@ -218,10 +211,10 @@ func main() {
 		// Return Sales in JSON format
 		return c.JSON(result)
 	})
-
 	// Get list of sale (by date)
-	app.Get("/sales/find/:syear-:smonth-:sday-:eyear-:emonth-:eday", func(c *fiber.Ctx) error {
-
+	app.Get("/sa/find/:syear-:smonth-:sday-:eyear-:emonth-:eday", func(c *fiber.Ctx) error {
+		//argh hungry. eat first la. go to vending machine first. kk.
+		//get some gummy bearsx2, melon milk, yougrt drink, soy drink
 		s_year, _ := strconv.Atoi(c.Params("syear"))
 		s_month, _ := strconv.Atoi(c.Params("smonth"))
 		s_day, _ := strconv.Atoi(c.Params("sday"))
@@ -252,9 +245,8 @@ func main() {
 		// Return Sales in JSON format
 		return c.JSON(result)
 	})
-
 	// New Sale
-	app.Post("/sales/new/:amount-:qty-:payment_type-:operation_id-:item_id", func(c *fiber.Ctx) error {
+	app.Post("/sa/new/:amount-:qty-:payment_type-:operation_id-:item_id", func(c *fiber.Ctx) error {
 		paramCache := new(Sale)
 
 		amt, err := strconv.Atoi(c.Params("amount"))
@@ -306,14 +298,49 @@ func main() {
 		// Return Employee in JSON format
 		return c.JSON(sale)
 	})
-
 	// Update Sale
 
 	// Delete Sale (admin only / only the most recent one)
 
 	// >> Inventory
+	// Get all inventory
+	app.Get("/inv", func(c *fiber.Ctx) error {
+		rows, err := db.Query("SELECT id, start_bal, end_bal, created_at, updated_at FROM inventory order by id")
+		if err != nil {
+			return c.Status(500).SendString(err.Error())
+		}
+		defer rows.Close()
+		result := Inventories{}
 
-	// Add inventory
+		for rows.Next() {
+			inv := Inventory{}
+			if err := rows.Scan(&inv.ID, &inv.StartBal, &inv.EndBal, &inv.CreatedAt, &inv.UpdatedAt); err != nil {
+				return err // Exit if we get an error
+			}
+
+			// Append Sale to Sales
+			result.Inventories = append(result.Inventories, inv)
+		}
+		// Return Sales in JSON format
+		return c.JSON(result)
+	})
+	// New inventory
+	app.Post("/inv/new/:start_bal", func(c *fiber.Ctx) error {
+		// Insert a new inventory record into database
+		sbItem := c.Params("start_bal")
+		res, err := db.Query("INSERT INTO inventory (start_bal, end_bal, created_at, updated_at)VALUES ($1, $2, $3, $4)", sbItem, "-1", time.Now(), time.Now())
+		_ = res
+		if err != nil {
+			return err
+		}
+		inv := new(Inventory)
+		// Re-querying because the scan from insert has no value?
+		resReQuery := db.QueryRow("SELECT id, start_bal, end_bal, created_at, updated_at FROM inventory ORDER BY ID DESC LIMIT 1")
+		resReQuery.Scan(&inv.ID, &inv.StartBal, &inv.EndBal, &inv.CreatedAt, &inv.UpdatedAt)
+
+		// Return Sales in JSON format
+		return c.JSON(resReQuery)
+	})
 
 	// Update inventory
 
@@ -347,12 +374,16 @@ type Balance struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+type Inventories struct {
+	Inventories []Inventory `json:"inventories"`
+}
+
 type Inventory struct {
-	ID           int       `json:"id"`
-	StartItemBal string    `json:"start_item_bal"`
-	EndItemBal   string    `json:"end_item_bal"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	ID        int       `json:"id"`
+	StartBal  string    `json:"start_bal"`
+	EndBal    string    `json:"end_bal"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 type Sale struct {

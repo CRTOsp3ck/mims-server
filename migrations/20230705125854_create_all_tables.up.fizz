@@ -19,8 +19,8 @@ create_table("item") {
 }
 create_table("inventory") {
   t.Column("id", "integer", {primary: true})
-  t.Column("start_item_bal", "string", {"default": "1=0"})
-  t.Column("end_item_bal", "string", {"default": "1=0"})
+  t.Column("start_bal", "string", {"default": "1=0"})
+  t.Column("end_bal", "string", {"default": "1=0"})
 }
 create_table("operation") {
   t.Column("id", "integer", {primary: true})
