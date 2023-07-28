@@ -338,12 +338,32 @@ func main() {
 		resReQuery := db.QueryRow("SELECT id, start_bal, end_bal, created_at, updated_at FROM inventory ORDER BY ID DESC LIMIT 1")
 		resReQuery.Scan(&inv.ID, &inv.StartBal, &inv.EndBal, &inv.CreatedAt, &inv.UpdatedAt)
 
-		// Return Sales in JSON format
-		return c.JSON(resReQuery)
+		// Return Inventory in JSON format
+		return c.JSON(inv)
 	})
-
 	// Update inventory
+	app.Put("/inv/up/:id-:end_bal", func(c *fiber.Ctx) error {
+		id, err := strconv.Atoi(c.Params("id"))
+		if err != nil {
+			return err
+		}
+		eb := c.Params("end_bal")
 
+		// Update inventory into database
+		res, err := db.Query("UPDATE inventory SET end_bal=$1,updated_at=$2 WHERE id=$3", eb, time.Now(), id)
+		_ = res
+		if err != nil {
+			return err
+		}
+
+		inv := Inventory{}
+		// Re-querying because the scan from insert has no value?
+		resReQuery := db.QueryRow("SELECT id, start_bal, end_bal, created_at, updated_at FROM inventory ORDER BY ID DESC LIMIT 1")
+		resReQuery.Scan(&inv.ID, &inv.StartBal, &inv.EndBal, &inv.CreatedAt, &inv.UpdatedAt)
+
+		// Return inv in JSON format
+		return c.JSON(inv)
+	})
 	// Delete inventory (admin only)
 
 	log.Fatal(app.Listen(":3001"))
