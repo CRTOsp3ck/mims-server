@@ -17,6 +17,7 @@ create_table("item") {
   t.Column("name", "string", {"default": ""})
   t.Column("des", "string", {"default": ""})
   t.Column("price", "float", {"default": "0.00"})
+  t.Column("cost_price", "float", {"default": "0.00"})
   t.Column("min_combo_qty", "int", {"default": "-1"})
   t.Column("min_combo_price", "float", {"default": "0.00"})
 }

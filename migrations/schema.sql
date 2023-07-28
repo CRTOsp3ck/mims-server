@@ -144,6 +144,7 @@ CREATE TABLE public.item (
     name character varying(255) DEFAULT ''::character varying NOT NULL,
     des character varying(255) DEFAULT ''::character varying NOT NULL,
     price numeric DEFAULT 0.00 NOT NULL,
+    cost_price numeric DEFAULT 0.00 NOT NULL,
     min_combo_qty integer DEFAULT '-1'::integer NOT NULL,
     min_combo_price numeric DEFAULT 0.00 NOT NULL,
     created_at timestamp without time zone NOT NULL,

@@ -171,8 +171,7 @@ func main() {
 			return c.Status(500).SendString(err.Error())
 		}
 		defer rows.Close()
-		result := Sales{}
-
+		sales := Sales{}
 		for rows.Next() {
 			sale := Sale{}
 			if err := rows.Scan(&sale.ID, &sale.Amount, &sale.Qty, &sale.PaymentType, &sale.OperationID, &sale.ItemID, &sale.CreatedAt, &sale.UpdatedAt); err != nil {
@@ -180,14 +179,20 @@ func main() {
 			}
 
 			// Append Sale to Sales
-			result.Sales = append(result.Sales, sale)
+			sales.Sales = append(sales.Sales, sale)
 		}
-
 		totalQty := 0.00
-		for _, sa := range result.Sales {
+		for _, sa := range sales.Sales {
 			totalQty += float64(sa.Qty)
 		}
 		paramCache.TotalSalesQty = int(totalQty)
+
+		// Get all items for price, cost_price, combo properties
+		// rows, err := db.Query("SELECT id, name, quantity, payment_type, operation_id, item_id, created_at, updated_at FROM sale WHERE operation_id=$1", opid)
+		// if err != nil {
+		// 	return c.Status(500).SendString(err.Error())
+		// }
+		// defer rows.Close()
 
 		// Enter total cost during operation end
 		paramCache.TotalCost = 0.00
@@ -415,6 +420,29 @@ func main() {
 	})
 	// Delete inventory (admin only)
 
+	// >> Item
+	// Get all items
+	app.Get("/it", func(c *fiber.Ctx) error {
+		rows, err := db.Query("SELECT id, name, des, price, cost_price, min_combo_qty, min_combo_price, created_at, updated_at FROM item order by id")
+		if err != nil {
+			return c.Status(500).SendString(err.Error())
+		}
+		defer rows.Close()
+		result := Items{}
+
+		for rows.Next() {
+			it := Item{}
+			if err := rows.Scan(&it.ID, &it.Name, &it.Des, &it.Price, &it.Cost, &it.MinComboQty, &it.MinComboPrice, &it.CreatedAt, &it.UpdatedAt); err != nil {
+				return err // Exit if we get an error
+			}
+
+			// Append Sale to Sales
+			result.Items = append(result.Items, it)
+		}
+		// Return Sales in JSON format
+		return c.JSON(result)
+	})
+
 	log.Fatal(app.Listen(":3001"))
 }
 
@@ -486,11 +514,15 @@ type Operation struct {
 	UpdatedAt        time.Time `json:"updated_at"`
 }
 
+type Items struct {
+	Items []Item `json:"items"`
+}
 type Item struct {
 	ID            int       `json:"id"`
 	Name          string    `json:"name"`
 	Des           string    `json:"des"`
 	Price         float32   `json:"price"`
+	Cost          float32   `json:"cost_price"`
 	MinComboQty   int       `json:"min_combo_qty"`
 	MinComboPrice float32   `json:"min_combo_price"`
 	CreatedAt     time.Time `json:"created_at"`
