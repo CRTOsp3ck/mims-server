@@ -36,6 +36,7 @@ End operation | /op/end/:id/bal/:end_bal_cash-:end_bal_qr/inv/:end_item_bal
 ```
 Get all sales | /sa
 Get list of sale (by date) | /sa/find/:syear-:smonth-:sday-:eyear-:emonth-:eday
+Get list of sale (by operation_id) | /sa/find/:operation-id
 New Sale | /sa/new/:amount-:qty-:payment_type-:operation_id-:item_id
 Update Sale | 
 Delete Sale (admin only / only the most recent one) | /sa/del/:id
@@ -44,9 +45,9 @@ Delete Sale (admin only / only the most recent one) | /sa/del/:id
 4. Inventory
 ```
 Get all inventory | /inv
-Add inventory | /inv
-Update inventory | /agents/:user
-Delete inventory (admin only) | /agents/:user
+Add inventory | /inv/new/:start_bal
+Update inventory | /inv/up/:id-:end_bal
+Delete inventory (admin only) |
 ```
 
 ##### NOTES #####

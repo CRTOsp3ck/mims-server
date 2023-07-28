@@ -163,10 +163,35 @@ func main() {
 
 		paramCache := new(Operation)
 		paramCache.EndTime = time.Now()
-		// Find and calculate all sales from this operation (using oepration_id)
-		paramCache.TotalSalesQty = 0
+
+		// Find and calculate all sales from this operation (using operation_id)
+		opid := c.Params("operation_id")
+		rows, err := db.Query("SELECT id, amount, quantity, payment_type, operation_id, item_id, created_at, updated_at FROM sale WHERE operation_id=$1", opid)
+		if err != nil {
+			return c.Status(500).SendString(err.Error())
+		}
+		defer rows.Close()
+		result := Sales{}
+
+		for rows.Next() {
+			sale := Sale{}
+			if err := rows.Scan(&sale.ID, &sale.Amount, &sale.Qty, &sale.PaymentType, &sale.OperationID, &sale.ItemID, &sale.CreatedAt, &sale.UpdatedAt); err != nil {
+				return err // Exit if we get an error
+			}
+
+			// Append Sale to Sales
+			result.Sales = append(result.Sales, sale)
+		}
+
+		totalQty := 0.00
+		for _, sa := range result.Sales {
+			totalQty += float64(sa.Qty)
+		}
+		paramCache.TotalSalesQty = int(totalQty)
+
 		// Enter total cost during operation end
 		paramCache.TotalCost = 0.00
+
 		// Calculate total sales amount (sale qty*price sold)
 		paramCache.TotalSalesAmount = 0.00
 		// Calculate net profit (total sales qty * rm8)
@@ -227,6 +252,30 @@ func main() {
 		ed := time.Date(e_year, time.Month(e_month), e_day, 0, 0, 0, 0, time.Local)
 
 		rows, err := db.Query("SELECT id, amount, quantity, payment_type, operation_id, item_id, created_at, updated_at FROM sale WHERE date_trunc('day', created_at) BETWEEN $1 and $2", sd, ed)
+		if err != nil {
+			return c.Status(500).SendString(err.Error())
+		}
+		defer rows.Close()
+		result := Sales{}
+
+		for rows.Next() {
+			sale := Sale{}
+			if err := rows.Scan(&sale.ID, &sale.Amount, &sale.Qty, &sale.PaymentType, &sale.OperationID, &sale.ItemID, &sale.CreatedAt, &sale.UpdatedAt); err != nil {
+				return err // Exit if we get an error
+			}
+
+			// Append Sale to Sales
+			result.Sales = append(result.Sales, sale)
+		}
+		// Return Sales in JSON format
+		return c.JSON(result)
+	})
+	// Get list of sale (by operation_id)
+	app.Get("/sa/find/:operation_id", func(c *fiber.Ctx) error {
+		// i really should eat, man. im losing weight. you want to get gastric again now, do you?
+		opid := c.Params("operation_id")
+
+		rows, err := db.Query("SELECT id, amount, quantity, payment_type, operation_id, item_id, created_at, updated_at FROM sale WHERE operation_id=$1", opid)
 		if err != nil {
 			return c.Status(500).SendString(err.Error())
 		}
@@ -409,7 +458,7 @@ type Inventory struct {
 type Sale struct {
 	ID          int       `json:"id"`
 	Amount      float32   `json:"amount"`
-	Qty         float32   `json:"quantity"` //this is float and not int bcos in case we plan to sell by weight, then it wouldnt make sense to use int
+	Qty         float32   `json:"quantity"` //**(SHOULD CHANGE TO INT) this is float and not int bcos in case we plan to sell by weight, then it wouldnt make sense to use int
 	PaymentType int       `json:"payment_type"`
 	OperationID int       `json:"operation_id"`
 	ItemID      int       `json:"item_id"`
@@ -438,9 +487,12 @@ type Operation struct {
 }
 
 type Item struct {
-	ID        int       `json:"id"`
-	Name      string    `json:"name"`
-	Des       string    `json:"des"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID            int       `json:"id"`
+	Name          string    `json:"name"`
+	Des           string    `json:"des"`
+	Price         float32   `json:"price"`
+	MinComboQty   int       `json:"min_combo_qty"`
+	MinComboPrice float32   `json:"min_combo_price"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
 }
