@@ -13,6 +13,7 @@ INSERT INTO public.inventory (start_bal,end_bal,created_at,updated_at) VALUES
 	 ('1=520&2=50','1=14&2=15','2023-06-07 00:00:00.000','2023-06-07 00:00:00.000');
 INSERT INTO public.operation (start_time,end_time,location,agent_id,total_sales_qty,total_cost,total_sales_amount,net_profit,balance_id,inventory_id,created_at,updated_at) VALUES
 	 ('2023-01-07 00:00:00','2023-01-07 00:00:00','Test Location',1,150,330.89,1200,869.11,1,1,'2023-06-07 00:00:00','2023-06-07 00:00:00');
-INSERT INTO public.sale (amount,quantity,payment_type,operation_id,item_id,created_at,updated_at) VALUES
-	 (32,4,1,1,1,'2023-06-07 00:00:00.000','2023-06-07 00:00:00.000'),
-	 (10,1,1,1,2,'2023-06-07 00:00:00.000','2023-06-07 00:00:00.000');
+INSERT INTO public.sale (amount,quantity,payment_type,operation_id,item_id,group_sale_id,created_at,updated_at) VALUES
+	 (32,4,1,1,1,0,'2023-06-07 00:00:00.000','2023-06-07 00:00:00.000'),
+	 (10,1,1,1,2,1,'2023-06-07 00:00:00.000','2023-06-07 00:00:00.000'),
+	 (32,4,1,1,1,1,'2023-06-07 00:00:00.000','2023-06-07 00:00:00.000');

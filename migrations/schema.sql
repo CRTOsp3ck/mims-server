@@ -232,6 +232,7 @@ CREATE TABLE public.sale (
     payment_type integer DEFAULT 1 NOT NULL,
     operation_id integer NOT NULL,
     item_id integer NOT NULL,
+    group_sale_id integer NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL
 );

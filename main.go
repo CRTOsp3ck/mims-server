@@ -89,7 +89,25 @@ func main() {
 
 	// >> Operation
 	// Get all operations
+	app.Get("/op", func(c *fiber.Ctx) error {
+		rows, err := db.Query("SELECT id, start_time, end_time, location, agent_id, total_sales_qty, total_cost, total_sales_amount, net_profit, balance_id, inventory_id, created_at, updated_at FROM operation ORDER BY id")
+		if err != nil {
+			return c.Status(500).SendString(err.Error())
+		}
+		defer rows.Close()
+		result := Operations{}
 
+		for rows.Next() {
+			res := Operation{}
+			err := rows.Scan(&res.ID, &res.StartTime, &res.EndTime, &res.Location, &res.AgentID, &res.TotalSalesQty, &res.TotalCost, &res.TotalSalesAmount, &res.NetProfit, &res.BalanceID, &res.InventoryID, &res.CreatedAt, &res.UpdatedAt)
+			if err != nil {
+				return err
+			}
+			result.Operations = append(result.Operations, res)
+		}
+
+		return c.JSON(result)
+	})
 	// Start operation
 	app.Post("/op/start/:location-:agent_user/bal/:start_bal_cash-:start_bal_qr/inv/:start_item_bal", func(c *fiber.Ctx) error {
 		paramCache := new(Operation)
@@ -141,7 +159,7 @@ func main() {
 
 		// Insert all cached data to db
 		res, err = db.Query("INSERT INTO operation (start_time, end_time, location, agent_id, total_sales_qty, total_cost, total_sales_amount, net_profit, balance_id, inventory_id, created_at, updated_at)VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)",
-			paramCache.StartTime, paramCache.EndTime, paramCache.Location, paramCache.AgentID, 0, 0.00, 0.00, 0.00, paramCache.BalanceID, paramCache.InventoryID, time.Now(), time.Now())
+			paramCache.StartTime, paramCache.EndTime, paramCache.Location, paramCache.AgentID, -1, -1.00, -1.00, -1.00, paramCache.BalanceID, paramCache.InventoryID, time.Now(), time.Now())
 		_ = res
 		if err != nil {
 			return err
@@ -155,17 +173,15 @@ func main() {
 		return c.JSON(op)
 	})
 	// End operation
-	app.Put("/op/end/:id", func(c *fiber.Ctx) error {
-		id, err := strconv.Atoi(c.Params("id"))
-		if err != nil {
-			return err
-		}
-
+	app.Put("/op/end/:operation_id-:total_cost", func(c *fiber.Ctx) error {
 		paramCache := new(Operation)
 		paramCache.EndTime = time.Now()
 
 		// Find and calculate all sales from this operation (using operation_id)
-		opid := c.Params("operation_id")
+		opid, err := strconv.Atoi(c.Params("operation_id"))
+		if err != nil {
+			return err
+		}
 		rows, err := db.Query("SELECT id, amount, quantity, payment_type, operation_id, item_id, created_at, updated_at FROM sale WHERE operation_id=$1", opid)
 		if err != nil {
 			return c.Status(500).SendString(err.Error())
@@ -181,30 +197,28 @@ func main() {
 			// Append Sale to Sales
 			sales.Sales = append(sales.Sales, sale)
 		}
+
 		totalQty := 0.00
+		totalSales := 0.00
 		for _, sa := range sales.Sales {
 			totalQty += float64(sa.Qty)
+			totalSales += float64(sa.Amount)
 		}
 		paramCache.TotalSalesQty = int(totalQty)
 
-		// Get all items for price, cost_price, combo properties
-		// rows, err := db.Query("SELECT id, name, quantity, payment_type, operation_id, item_id, created_at, updated_at FROM sale WHERE operation_id=$1", opid)
-		// if err != nil {
-		// 	return c.Status(500).SendString(err.Error())
-		// }
-		// defer rows.Close()
-
 		// Enter total cost during operation end
-		paramCache.TotalCost = 0.00
+		totalCost, _ := strconv.ParseFloat(c.Params("total_cost"), 32)
+		paramCache.TotalCost = float32(totalCost)
 
 		// Calculate total sales amount (sale qty*price sold)
-		paramCache.TotalSalesAmount = 0.00
+		paramCache.TotalSalesAmount = float32(totalSales)
+
 		// Calculate net profit (total sales qty * rm8)
-		paramCache.NetProfit = 0.00
+		paramCache.NetProfit = float32(totalSales - totalCost)
 		paramCache.UpdatedAt = time.Now()
 
 		// Update operation into database
-		res, err := db.Query("UPDATE operation SET end_time=$1,total_sales_qty=$2,total_cost=$3,total_sales_amount=$4,net_profit=$5, updated_at=$6 WHERE id=$7", paramCache.EndTime, paramCache.TotalSalesQty, paramCache.TotalCost, paramCache.TotalSalesAmount, paramCache.NetProfit, paramCache.UpdatedAt, id)
+		res, err := db.Query("UPDATE operation SET end_time=$1,total_sales_qty=$2,total_cost=$3,total_sales_amount=$4,net_profit=$5, updated_at=$6 WHERE id=$7", paramCache.EndTime, paramCache.TotalSalesQty, paramCache.TotalCost, paramCache.TotalSalesAmount, paramCache.NetProfit, paramCache.UpdatedAt, opid)
 		_ = res
 		if err != nil {
 			return err
@@ -212,11 +226,13 @@ func main() {
 
 		op := Operation{}
 		// Re-querying because the scan from insert has no value?
-		resReQuery := db.QueryRow("SELECT id, start_time, end_time, location, agent_id, total_sales_qty, total_cost, total_sales_amount, net_profit, balance_id, inventory_id, created_at, updated_at FROM operation ORDER BY ID DESC LIMIT 1")
+		resReQuery := db.QueryRow("SELECT id, start_time, end_time, location, agent_id, total_sales_qty, total_cost, total_sales_amount, net_profit, balance_id, inventory_id, created_at, updated_at FROM operation WHERE id=$1", opid)
 		resReQuery.Scan(&op.ID, &op.StartTime, &op.EndTime, &op.Location, &op.AgentID, &op.TotalSalesQty, &op.TotalCost, &op.TotalSalesAmount, &op.NetProfit, &op.BalanceID, &op.InventoryID, &op.CreatedAt, &op.UpdatedAt)
 
 		// Return operation in JSON format
-		return c.Status(201).JSON(op)
+		return c.JSON(op)
+
+		// TODO: Need to update the balances and inventories also!! -> work on logging in
 	})
 
 	// >> Sales
@@ -300,7 +316,7 @@ func main() {
 		return c.JSON(result)
 	})
 	// New Sale
-	app.Post("/sa/new/:amount-:qty-:payment_type-:operation_id-:item_id", func(c *fiber.Ctx) error {
+	app.Post("/sa/new/:amount-:qty-:payment_type-:operation_id-:item_id-:group_sale_id?", func(c *fiber.Ctx) error {
 		paramCache := new(Sale)
 
 		amt, err := strconv.Atoi(c.Params("amount"))
@@ -333,9 +349,18 @@ func main() {
 		}
 		paramCache.ItemID = iid
 
+		// if gsid is not present, the default value 0 means its a parent
+		if c.Params("group_sale_id") != "" {
+			gsid, err := strconv.Atoi(c.Params("group_sale_id"))
+			if err != nil {
+				return err
+			}
+			paramCache.GroupSaleID = gsid
+		}
+
 		// Insert sale into database
-		res, err := db.Query("INSERT INTO sale (amount, quantity, payment_type, operation_id, item_id, created_at, updated_at)VALUES ($1, $2, $3, $4, $5, $6, $7)",
-			paramCache.Amount, paramCache.Qty, paramCache.PaymentType, paramCache.OperationID, paramCache.ItemID, time.Now(), time.Now())
+		res, err := db.Query("INSERT INTO sale (amount, quantity, payment_type, operation_id, item_id, group_sale_id, created_at, updated_at)VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+			paramCache.Amount, paramCache.Qty, paramCache.PaymentType, paramCache.OperationID, paramCache.ItemID, paramCache.GroupSaleID, time.Now(), time.Now())
 		_ = res
 		if err != nil {
 			return err
@@ -343,11 +368,8 @@ func main() {
 
 		sale := new(Sale)
 		// Re-querying because the scan from insert has no value?
-		resReQuery := db.QueryRow("SELECT id, amount, quantity, payment_type, operation_id, item_id, created_at, updated_at FROM sale ORDER BY ID DESC LIMIT 1")
-		resReQuery.Scan(&sale.ID, &sale.Amount, &sale.Qty, &sale.PaymentType, &sale.OperationID, &sale.ItemID, &sale.CreatedAt, &sale.UpdatedAt)
-
-		// Print result
-		log.Println(sale)
+		resReQuery := db.QueryRow("SELECT id, amount, quantity, payment_type, operation_id, item_id, group_sale_id, created_at, updated_at FROM sale ORDER BY ID DESC LIMIT 1")
+		resReQuery.Scan(&sale.ID, &sale.Amount, &sale.Qty, &sale.PaymentType, &sale.OperationID, &sale.ItemID, &sale.GroupSaleID, &sale.CreatedAt, &sale.UpdatedAt)
 
 		// Return Employee in JSON format
 		return c.JSON(sale)
@@ -447,6 +469,7 @@ func main() {
 }
 
 // Data models
+
 type Agent struct {
 	ID        int       `json:"id"`
 	Username  string    `json:"username"`
@@ -490,6 +513,7 @@ type Sale struct {
 	PaymentType int       `json:"payment_type"`
 	OperationID int       `json:"operation_id"`
 	ItemID      int       `json:"item_id"`
+	GroupSaleID int       `json:"group_sale_id"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }
@@ -514,8 +538,8 @@ type Operation struct {
 	UpdatedAt        time.Time `json:"updated_at"`
 }
 
-type Items struct {
-	Items []Item `json:"items"`
+type Operations struct {
+	Operations []Operation `json:"operations"`
 }
 type Item struct {
 	ID            int       `json:"id"`
@@ -527,4 +551,8 @@ type Item struct {
 	MinComboPrice float32   `json:"min_combo_price"`
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
+}
+
+type Items struct {
+	Items []Item `json:"items"`
 }
