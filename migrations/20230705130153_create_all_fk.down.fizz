@@ -1,5 +1,0 @@
-drop_foreign_key("sale", "sale_item_id_fk", {})
-drop_foreign_key("sale", "sale_operation_id_fk", {})
-drop_foreign_key("operation", "operation_agent_id_fk", {})
-drop_foreign_key("operation", "operation_balance_id_fk", {})
-drop_foreign_key("operation", "operation_inventory_id_fk", {})
