@@ -33,10 +33,6 @@ func main() {
 		db := database.DB
 		var ag model.Agent
 		db.First(&ag, "username = ?", c.Params("user"))
-		if ag.Username == "" {
-			return c.Status(404).JSON(fiber.Map{"status": "error", "message": "No agent found with username", "data": nil})
-
-		}
 		return c.JSON(ag)
 	})
 
@@ -60,10 +56,6 @@ func main() {
 		// Find ID of the agent's username
 		var ag model.Agent
 		db.First(&ag, "username = ?", c.Params("agent_user"))
-		if ag.Username == "" {
-			return c.Status(404).JSON(fiber.Map{"status": "error", "message": "No agent found with username", "data": nil})
-
-		}
 		op.AgentID = int(ag.ID)
 
 		// Insert a new balance record into database
@@ -130,147 +122,106 @@ func main() {
 		// TODO: Need to update the balances and inventories also!! -> work on logging in
 	})
 
-	// // >> Sales
-	// // Get all sales
-	// app.Get("/sa", func(c *fiber.Ctx) error {
-	// 	rows, err := db.Query("SELECT id, amount, quantity, payment_type, operation_id, item_id, created_at, updated_at FROM sale order by id")
-	// 	if err != nil {
-	// 		return c.Status(500).SendString(err.Error())
-	// 	}
-	// 	defer rows.Close()
-	// 	result := Sales{}
+	// >> Sales
+	// Get all sales
+	app.Get("/sa", func(c *fiber.Ctx) error {
+		db := database.DB
+		var sales []model.Sale
+		db.Find(&sales)
+		// Return Sales in JSON format
+		return c.JSON(sales)
+	})
+	// Get list of sale (by date)
+	app.Get("/sa/find/:syear-:smonth-:sday-:eyear-:emonth-:eday", func(c *fiber.Ctx) error {
+		s_year, _ := strconv.Atoi(c.Params("syear"))
+		s_month, _ := strconv.Atoi(c.Params("smonth"))
+		s_day, _ := strconv.Atoi(c.Params("sday"))
 
-	// 	for rows.Next() {
-	// 		sale := Sale{}
-	// 		if err := rows.Scan(&sale.ID, &sale.Amount, &sale.Qty, &sale.PaymentType, &sale.OperationID, &sale.ItemID, &sale.CreatedAt, &sale.UpdatedAt); err != nil {
-	// 			return err // Exit if we get an error
-	// 		}
+		e_year, _ := strconv.Atoi(c.Params("eyear"))
+		e_month, _ := strconv.Atoi(c.Params("emonth"))
+		e_day, _ := strconv.Atoi(c.Params("eday"))
 
-	// 		// Append Sale to Sales
-	// 		result.Sales = append(result.Sales, sale)
-	// 	}
-	// 	// Return Sales in JSON format
-	// 	return c.JSON(result)
-	// })
-	// // Get list of sale (by date)
-	// app.Get("/sa/find/:syear-:smonth-:sday-:eyear-:emonth-:eday", func(c *fiber.Ctx) error {
-	// 	//argh hungry. eat first la. go to vending machine first. kk.
-	// 	//get some gummy bearsx2, melon milk, yougrt drink, soy drink
-	// 	s_year, _ := strconv.Atoi(c.Params("syear"))
-	// 	s_month, _ := strconv.Atoi(c.Params("smonth"))
-	// 	s_day, _ := strconv.Atoi(c.Params("sday"))
+		sd := time.Date(s_year, time.Month(s_month), s_day, 0, 0, 0, 0, time.Local) //should add the time also
+		ed := time.Date(e_year, time.Month(e_month), e_day, 0, 0, 0, 0, time.Local)
 
-	// 	e_year, _ := strconv.Atoi(c.Params("eyear"))
-	// 	e_month, _ := strconv.Atoi(c.Params("emonth"))
-	// 	e_day, _ := strconv.Atoi(c.Params("eday"))
+		db := database.DB
+		var sales []model.Sale
+		db.Where("created_at BETWEEN ? AND ?", sd, ed).Find(&sales)
 
-	// 	sd := time.Date(s_year, time.Month(s_month), s_day, 0, 0, 0, 0, time.Local)
-	// 	ed := time.Date(e_year, time.Month(e_month), e_day, 0, 0, 0, 0, time.Local)
+		// Return Sales in JSON format
+		return c.JSON(sales)
+	})
+	// Get list of sale (by operation_id)
+	app.Get("/sa/find/:op_id", func(c *fiber.Ctx) error {
+		opid, _ := strconv.Atoi(c.Params("op_id"))
 
-	// 	rows, err := db.Query("SELECT id, amount, quantity, payment_type, operation_id, item_id, created_at, updated_at FROM sale WHERE date_trunc('day', created_at) BETWEEN $1 and $2", sd, ed)
-	// 	if err != nil {
-	// 		return c.Status(500).SendString(err.Error())
-	// 	}
-	// 	defer rows.Close()
-	// 	result := Sales{}
+		db := database.DB
+		var sales []model.Sale
+		db.Where("operation_id <> ?", opid-1).Find(&sales)
 
-	// 	for rows.Next() {
-	// 		sale := Sale{}
-	// 		if err := rows.Scan(&sale.ID, &sale.Amount, &sale.Qty, &sale.PaymentType, &sale.OperationID, &sale.ItemID, &sale.CreatedAt, &sale.UpdatedAt); err != nil {
-	// 			return err // Exit if we get an error
-	// 		}
+		// Return Sales in JSON format
+		return c.JSON(sales)
 
-	// 		// Append Sale to Sales
-	// 		result.Sales = append(result.Sales, sale)
-	// 	}
-	// 	// Return Sales in JSON format
-	// 	return c.JSON(result)
-	// })
-	// // Get list of sale (by operation_id)
-	// app.Get("/sa/find/:operation_id", func(c *fiber.Ctx) error {
-	// 	// i really should eat, man. im losing weight. you want to get gastric again now, do you?
-	// 	opid := c.Params("operation_id")
+	})
+	// New Sale
+	app.Post("/sa/new/:amount-:qty-:payment_type-:op_id-:item_id-:group_sale_id", func(c *fiber.Ctx) error {
+		db := database.DB
+		var sale model.Sale
+		amt, err := strconv.Atoi(c.Params("amount"))
+		if err != nil {
+			return err
+		}
+		sale.Amount = float32(amt)
 
-	// 	rows, err := db.Query("SELECT id, amount, quantity, payment_type, operation_id, item_id, created_at, updated_at FROM sale WHERE operation_id=$1", opid)
-	// 	if err != nil {
-	// 		return c.Status(500).SendString(err.Error())
-	// 	}
-	// 	defer rows.Close()
-	// 	result := Sales{}
+		qty, err := strconv.Atoi(c.Params("qty"))
+		if err != nil {
+			return err
+		}
+		sale.Qty = qty
 
-	// 	for rows.Next() {
-	// 		sale := Sale{}
-	// 		if err := rows.Scan(&sale.ID, &sale.Amount, &sale.Qty, &sale.PaymentType, &sale.OperationID, &sale.ItemID, &sale.CreatedAt, &sale.UpdatedAt); err != nil {
-	// 			return err // Exit if we get an error
-	// 		}
+		pt, err := strconv.Atoi(c.Params("payment_type"))
+		if err != nil {
+			return err
+		}
+		sale.PaymentType = pt
 
-	// 		// Append Sale to Sales
-	// 		result.Sales = append(result.Sales, sale)
-	// 	}
-	// 	// Return Sales in JSON format
-	// 	return c.JSON(result)
-	// })
-	// // New Sale
-	// app.Post("/sa/new/:amount-:qty-:payment_type-:operation_id-:item_id-:group_sale_id", func(c *fiber.Ctx) error {
-	// 	paramCache := new(Sale)
+		oid, err := strconv.Atoi(c.Params("op_id"))
+		if err != nil {
+			return err
+		}
+		sale.OperationID = oid
 
-	// 	amt, err := strconv.Atoi(c.Params("amount"))
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	paramCache.Amount = float32(amt)
+		iid, err := strconv.Atoi(c.Params("item_id"))
+		if err != nil {
+			return err
+		}
+		sale.ItemID = iid
 
-	// 	qty, err := strconv.Atoi(c.Params("qty"))
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	paramCache.Qty = float32(qty)
+		// if gsid is not present, the default value 0 means its a parent
+		if c.Params("group_sale_id") != "" {
+			gsid, err := strconv.Atoi(c.Params("group_sale_id"))
+			if err != nil {
+				return err
+			}
+			sale.GroupSaleID = gsid
+		}
 
-	// 	pt, err := strconv.Atoi(c.Params("payment_type"))
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	paramCache.PaymentType = pt
+		db.Create(&sale)
 
-	// 	oid, err := strconv.Atoi(c.Params("operation_id"))
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	paramCache.OperationID = oid
+		// Return sale in JSON format
+		return c.JSON(sale)
+	})
 
-	// 	iid, err := strconv.Atoi(c.Params("item_id"))
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	paramCache.ItemID = iid
+	// Delete Sale (admin only / only the most recent one)
+	app.Post("/sa/del/:id", func(c *fiber.Ctx) error {
+		id := c.Params("id")
+		db := database.DB
 
-	// 	// if gsid is not present, the default value 0 means its a parent
-	// 	if c.Params("group_sale_id") != "" {
-	// 		gsid, err := strconv.Atoi(c.Params("group_sale_id"))
-	// 		if err != nil {
-	// 			return err
-	// 		}
-	// 		paramCache.GroupSaleID = gsid
-	// 	}
-
-	// 	// Insert sale into database
-	// 	res, err := db.Query("INSERT INTO sale (amount, quantity, payment_type, operation_id, item_id, group_sale_id, created_at, updated_at)VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
-	// 		paramCache.Amount, paramCache.Qty, paramCache.PaymentType, paramCache.OperationID, paramCache.ItemID, paramCache.GroupSaleID, time.Now(), time.Now())
-	// 	_ = res
-	// 	if err != nil {
-	// 		return err
-	// 	}
-
-	// 	sale := new(Sale)
-	// 	// Re-querying because the scan from insert has no value?
-	// 	resReQuery := db.QueryRow("SELECT id, amount, quantity, payment_type, operation_id, item_id, group_sale_id, created_at, updated_at FROM sale ORDER BY ID DESC LIMIT 1")
-	// 	resReQuery.Scan(&sale.ID, &sale.Amount, &sale.Qty, &sale.PaymentType, &sale.OperationID, &sale.ItemID, &sale.GroupSaleID, &sale.CreatedAt, &sale.UpdatedAt)
-
-	// 	// Return Employee in JSON format
-	// 	return c.JSON(sale)
-	// })
-
-	// // Delete Sale (admin only / only the most recent one)
+		var sale model.Sale
+		db.First(&sale, id)
+		db.Delete(&sale)
+		return c.JSON(sale)
+	})
 
 	// // >> Inventory
 	// // Get all inventory

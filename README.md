@@ -2,6 +2,7 @@
 Food for thought: Maybe I should just make this a datastore microservice and create a seperate api server microservice when shit starts to hit the fan.
 
 ##### README #####
+```
 1. Install go
 2. Install postgres
 3. add root as psql user
@@ -13,6 +14,7 @@ Food for thought: Maybe I should just make this a datastore microservice and cre
 9. login to psql
 10. add seed data
 11. i know it is shit systems design atm, but its a start
+```
 
 ##### FLOW #####
 Login -> Start New Operation -> Add sale* -> End Operation
@@ -63,4 +65,5 @@ Delete inventory (admin only) |
     3 - MD2 Raw Fruit
 3. start_item_bal and end_item_bal data type is string so that I can format the data as `1=150&2=45`, 1 indicating item_id 1 and 2 indicating item_id 2
 4. make sale_item_group table to group items when posting data (instead of having to make 3 post requests, for new sale)
+5. group_sale_id if its 0, its the parent sale.
 ```
