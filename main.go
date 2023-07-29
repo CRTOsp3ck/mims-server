@@ -214,101 +214,63 @@ func main() {
 
 	// Delete Sale (admin only / only the most recent one)
 	app.Post("/sa/del/:id", func(c *fiber.Ctx) error {
-		id := c.Params("id")
 		db := database.DB
-
 		var sale model.Sale
-		db.First(&sale, id)
+		db.First(&sale, c.Params("id"))
 		db.Delete(&sale)
 		return c.JSON(sale)
 	})
 
-	// // >> Inventory
-	// // Get all inventory
-	// app.Get("/inv", func(c *fiber.Ctx) error {
-	// 	rows, err := db.Query("SELECT id, start_bal, end_bal, created_at, updated_at FROM inventory order by id")
-	// 	if err != nil {
-	// 		return c.Status(500).SendString(err.Error())
-	// 	}
-	// 	defer rows.Close()
-	// 	result := Inventories{}
+	// >> Inventory
+	// Get all inventory
+	app.Get("/inv", func(c *fiber.Ctx) error {
+		db := database.DB
+		var invs []model.Inventory
+		db.Find(&invs)
+		// Return inventory in JSON format
+		return c.JSON(invs)
+	})
+	// New inventory
+	app.Post("/inv/new/:start_bal", func(c *fiber.Ctx) error {
+		db := database.DB
+		// Insert a new inventory record into database
+		var inv model.Inventory
+		inv.StartBal = c.Params("start_bal")
+		inv.EndBal = "-1"
+		db.Create(&inv)
 
-	// 	for rows.Next() {
-	// 		inv := Inventory{}
-	// 		if err := rows.Scan(&inv.ID, &inv.StartBal, &inv.EndBal, &inv.CreatedAt, &inv.UpdatedAt); err != nil {
-	// 			return err // Exit if we get an error
-	// 		}
+		// Return Inventory in JSON format
+		return c.JSON(inv)
+	})
+	// Update inventory
+	app.Put("/inv/up/:id-:end_bal", func(c *fiber.Ctx) error {
+		db := database.DB
+		// Update inventory into database
+		var inv model.Inventory
+		db.Where("id = ?", c.Params("id")).Find(&inv)
+		inv.EndBal = c.Params("end_bal")
+		db.Save(&inv)
+		// Return inv in JSON format
+		return c.JSON(inv)
+	})
+	// Delete inventory (admin only)
+	app.Post("/inv/del/:id", func(c *fiber.Ctx) error {
+		db := database.DB
+		var inv model.Inventory
+		db.First(&inv, c.Params("id"))
+		db.Delete(&inv)
+		return c.JSON(inv)
+	})
 
-	// 		// Append Sale to Sales
-	// 		result.Inventories = append(result.Inventories, inv)
-	// 	}
-	// 	// Return Sales in JSON format
-	// 	return c.JSON(result)
-	// })
-	// // New inventory
-	// app.Post("/inv/new/:start_bal", func(c *fiber.Ctx) error {
-	// 	// Insert a new inventory record into database
-	// 	sbItem := c.Params("start_bal")
-	// 	res, err := db.Query("INSERT INTO inventory (start_bal, end_bal, created_at, updated_at)VALUES ($1, $2, $3, $4)", sbItem, "-1", time.Now(), time.Now())
-	// 	_ = res
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	inv := new(Inventory)
-	// 	// Re-querying because the scan from insert has no value?
-	// 	resReQuery := db.QueryRow("SELECT id, start_bal, end_bal, created_at, updated_at FROM inventory ORDER BY ID DESC LIMIT 1")
-	// 	resReQuery.Scan(&inv.ID, &inv.StartBal, &inv.EndBal, &inv.CreatedAt, &inv.UpdatedAt)
-
-	// 	// Return Inventory in JSON format
-	// 	return c.JSON(inv)
-	// })
-	// // Update inventory
-	// app.Put("/inv/up/:id-:end_bal", func(c *fiber.Ctx) error {
-	// 	id, err := strconv.Atoi(c.Params("id"))
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	eb := c.Params("end_bal")
-
-	// 	// Update inventory into database
-	// 	res, err := db.Query("UPDATE inventory SET end_bal=$1,updated_at=$2 WHERE id=$3", eb, time.Now(), id)
-	// 	_ = res
-	// 	if err != nil {
-	// 		return err
-	// 	}
-
-	// 	inv := Inventory{}
-	// 	// Re-querying because the scan from insert has no value?
-	// 	resReQuery := db.QueryRow("SELECT id, start_bal, end_bal, created_at, updated_at FROM inventory ORDER BY ID DESC LIMIT 1")
-	// 	resReQuery.Scan(&inv.ID, &inv.StartBal, &inv.EndBal, &inv.CreatedAt, &inv.UpdatedAt)
-
-	// 	// Return inv in JSON format
-	// 	return c.JSON(inv)
-	// })
-	// // Delete inventory (admin only)
-
-	// // >> Item
-	// // Get all items
-	// app.Get("/it", func(c *fiber.Ctx) error {
-	// 	rows, err := db.Query("SELECT id, name, des, price, cost_price, min_combo_qty, min_combo_price, created_at, updated_at FROM item order by id")
-	// 	if err != nil {
-	// 		return c.Status(500).SendString(err.Error())
-	// 	}
-	// 	defer rows.Close()
-	// 	result := Items{}
-
-	// 	for rows.Next() {
-	// 		it := Item{}
-	// 		if err := rows.Scan(&it.ID, &it.Name, &it.Des, &it.Price, &it.Cost, &it.MinComboQty, &it.MinComboPrice, &it.CreatedAt, &it.UpdatedAt); err != nil {
-	// 			return err // Exit if we get an error
-	// 		}
-
-	// 		// Append Sale to Sales
-	// 		result.Items = append(result.Items, it)
-	// 	}
-	// 	// Return Sales in JSON format
-	// 	return c.JSON(result)
-	// })
+	// >> Item
+	// Get all items
+	app.Get("/it", func(c *fiber.Ctx) error {
+		db := database.DB
+		var it []model.Item
+		db.Find(&it)
+		// Return inventory in JSON format
+		return c.JSON(it)
+	})
 
 	log.Fatal(app.Listen(":3001"))
 }
