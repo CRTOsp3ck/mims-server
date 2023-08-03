@@ -46,7 +46,7 @@ type Inventory struct {
 type Sale struct {
 	gorm.Model
 	Amount      float32 `gorm:"not null" json:"amount"`
-	Qty         int     `gorm:"not null" json:"quantity"`
+	Qty         int     `gorm:"not null" json:"qty"`
 	PaymentType int     `gorm:"not null" json:"payment_type"`
 	OperationID int     `gorm:"not null" json:"operation_id"`
 	ItemID      int     `gorm:"not null" json:"item_id"`
