@@ -118,12 +118,6 @@ func Login(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"status": "success", "message": "Logged in", "data": t})
 }
 
-// Login get user
-func Logout(c *fiber.Ctx) error {
-
-	return c.JSON(fiber.Map{"status": "success", "message": "Logged out", "data": nil})
-}
-
 // Returns authentication status
 func AuthStatus(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"status": "success", "message": "authenticated", "data": nil})
