@@ -8,10 +8,11 @@ import (
 
 type User struct {
 	gorm.Model
-	Username string `gorm:"uniqueIndex;not null" json:"username"`
-	Email    string `gorm:"uniqueIndex;not null" json:"email"`
-	Password string `gorm:"not null" json:"password"`
-	Names    string `json:"names"`
+	Username  string `gorm:"uniqueIndex;not null" json:"username"`
+	Email     string `gorm:"uniqueIndex;not null" json:"email"`
+	Password  string `gorm:"not null" json:"password"`
+	Names     string `json:"names"`
+	AuthToken string `json:"auth_token"`
 }
 
 type Product struct {

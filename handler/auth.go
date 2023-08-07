@@ -107,5 +107,24 @@ func Login(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusInternalServerError)
 	}
 
-	return c.JSON(fiber.Map{"status": "success", "message": "Success login", "data": t})
+	// store token in user table (auth_token column)
+	db := database.DB
+	var user model.User
+
+	db.First(&user, userData.ID)
+	user.AuthToken = t
+	db.Save(&user)
+
+	return c.JSON(fiber.Map{"status": "success", "message": "Logged in", "data": t})
+}
+
+// Login get user
+func Logout(c *fiber.Ctx) error {
+
+	return c.JSON(fiber.Map{"status": "success", "message": "Logged out", "data": nil})
+}
+
+// Returns authentication status
+func AuthStatus(c *fiber.Ctx) error {
+	return c.JSON(fiber.Map{"status": "success", "message": "authenticated", "data": nil})
 }
